@@ -295,11 +295,11 @@ These graphs describe:
 Example:
 
 ```md
-![Conversion Turing Machine](images/conversion_tm.png)
+![Conversion Turing Machine](images/converter.png)
 ```
 
 ```md
-![Comparison Turing Machine](images/comparison_tm.png)
+![Comparison Turing Machine](images/validator.png)
 ```
 
 ---
