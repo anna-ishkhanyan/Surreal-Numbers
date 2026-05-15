@@ -323,3 +323,11 @@ The project also includes a recursive CFG-based surreal integer generator.
 # Goal of the Project
 
 The goal of this project is to demonstrate how canonical finite integer surreal numbers can be represented, generated, validated, converted, and compared using concepts from Theory of Computation, including Turing Machines and Context-Free Grammars.
+
+# Acknowledgment
+
+The Turing Machine simulations and state diagrams used in this project were created and tested using:
+
+https://turingmachine.io/
+
+This tool was used for simulating transition functions, visualizing state graphs, and testing the behavior of the implemented Turing Machines.
