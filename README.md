@@ -1,4 +1,4 @@
-# Surreal Integer Symbolic Machine
+# Surreal Numbers Turing Machine
 
 A Python framework for working with canonical finite surreal integers using symbolic computation and Turing-machine-inspired operations.
 
