@@ -1,346 +1,266 @@
 import argparse
-from dataclasses import dataclass
-
 
 BLANK = " "
 ALPHABET = {"{", "}", "|"}
 
-
-@dataclass
-class TuringMachine:
-    tape: list
-    head: int
-    state: str
-    rules: dict
-    blank: str = BLANK
-
-    def step(self):
-        symbol = self.tape[self.head]
-
-        if (self.state, symbol) not in self.rules:
-            self.state = "reject"
-            return
-
-        new_state, write_symbol, direction = self.rules[(self.state, symbol)]
-        self.tape[self.head] = write_symbol
-
-        if direction == "R":
-            self.head += 1
-            if self.head == len(self.tape):
-                self.tape.append(self.blank)
-
-        elif direction == "L":
-            self.head -= 1
-            if self.head < 0:
-                self.tape.insert(0, self.blank)
-                self.head = 0
-
-        self.state = new_state
-
-    def run(self, trace=False, max_steps=10000):
-        steps = 0
-
-        while self.state not in ["accept", "reject"]:
-            if trace:
-                print(self.snapshot())
-
-            self.step()
-            steps += 1
-
-            if steps > max_steps:
-                self.state = "reject"
-                break
-
-        if trace:
-            print(self.snapshot())
-
-        return self.state, "".join(self.tape)
-
-    def snapshot(self):
-        tape_str = "".join(self.tape)
-        pointer = " " * self.head + "^"
-        return f"{tape_str}\n{pointer} state={self.state}\n"
+ZERO = "{|}"
 
 
 def only_allowed_symbols(s: str) -> bool:
     return all(ch in ALPHABET for ch in s)
 
 
-def is_non_positive_finite_integer(s: str) -> bool:
-    """
-    Generates only:
-    0, -1, -2, -3, ...
+def surreal_successor(s: str) -> str:
+    # +1 as surreal operation: x + 1 = {x|}
+    return "{" + s + "|}"
 
-    0  = {|}
-    -1 = {|{|}}
-    -2 = {|{|{|}}}
-    """
 
-    if s == "{|}":
-        return True
+def surreal_predecessor(s: str) -> str:
+    # -1 as surreal operation: x - 1 = {|x}
+    return "{|" + s + "}"
 
-    if s.startswith("{|") and s.endswith("}"):
-        inner = s[2:-1]
-        return is_non_positive_finite_integer(inner)
 
-    return False
+def is_zero(s: str) -> bool:
+    return s == ZERO
+
+
+def is_successor_form(s: str) -> bool:
+    return (
+        s.startswith("{")
+        and s.endswith("|}")
+        and not s.startswith("{|")
+        and s != ZERO
+    )
+
+
+def is_predecessor_form(s: str) -> bool:
+    return s.startswith("{|") and s.endswith("}") and s != ZERO
+
+
+def inner_successor(s: str) -> str:
+    # removes outer { x | }
+    return s[1:-2]
+
+
+def inner_predecessor(s: str) -> str:
+    # removes outer { | x }
+    return s[2:-1]
 
 
 def is_valid_surreal_integer(s: str) -> bool:
-    """
-    Valid canonical finite integer surreal numbers:
-
-    0  = {|}
-    1  = {{|}|}
-    2  = {{{|}|}|}
-
-    -1 = {|{|}}
-    -2 = {|{|{|}}}
-    """
-
     if not s:
         return False
 
     if not only_allowed_symbols(s):
         return False
 
-    if s == "{|}":
+    if is_zero(s):
         return True
 
-    # positive integer: x + 1 = {x|}
-    if s.startswith("{") and s.endswith("|}"):
-        inner = s[1:-2]
-        return is_valid_surreal_integer(inner)
+    if is_successor_form(s):
+        return is_valid_surreal_integer(inner_successor(s))
 
-    # negative integer: x - 1 = {|x}, where x <= 0
-    if s.startswith("{|") and s.endswith("}"):
-        inner = s[2:-1]
-        return is_non_positive_finite_integer(inner)
+    if is_predecessor_form(s):
+        return is_valid_surreal_integer(inner_predecessor(s))
 
     return False
 
 
-def surreal_to_int(s: str) -> int:
-    if not is_valid_surreal_integer(s):
-        raise ValueError("Invalid finite integer surreal number")
+def compare_surreal(a: str, b: str, trace=False) -> str:
+    """
+    Compares canonical finite surreal integers without converting to int.
 
-    if s == "{|}":
-        return 0
+    Rules:
+    0 = {|}
+    successor(x) = {x|}
+    predecessor(x) = {|x}
+    """
 
-    # positive case: {x|}
-    if s.startswith("{") and s.endswith("|}"):
-        inner = s[1:-2]
-        return surreal_to_int(inner) + 1
+    if not is_valid_surreal_integer(a):
+        raise ValueError("First surreal number is invalid")
 
-    # negative case: {|x}
-    if s.startswith("{|") and s.endswith("}"):
-        inner = s[2:-1]
-        return surreal_to_int(inner) - 1
+    if not is_valid_surreal_integer(b):
+        raise ValueError("Second surreal number is invalid")
 
-    raise ValueError("Invalid finite integer surreal number")
+    while True:
+        if trace:
+            print(f"Comparing: {a}  ?  {b}")
 
+        if a == b:
+            return "="
 
-def surreal_to_unary(s: str) -> str:
-    value = surreal_to_int(s)
+        if is_zero(a):
+            return ">" if is_predecessor_form(b) else "<"
 
-    if value == 0:
-        return "0"
+        if is_zero(b):
+            return "<" if is_predecessor_form(a) else ">"
 
-    if value > 0:
-        return "1" * value
+        if is_successor_form(a) and is_predecessor_form(b):
+            return ">"
 
-    return "-" + ("1" * abs(value))
+        if is_predecessor_form(a) and is_successor_form(b):
+            return "<"
 
+        if is_successor_form(a) and is_successor_form(b):
+            a = inner_successor(a)
+            b = inner_successor(b)
+            continue
 
-def compare_surreal(a: str, b: str) -> str:
-    x = surreal_to_int(a)
-    y = surreal_to_int(b)
+        if is_predecessor_form(a) and is_predecessor_form(b):
+            a = inner_predecessor(a)
+            b = inner_predecessor(b)
+            continue
 
-    if x < y:
-        return "<"
-    elif x > y:
-        return ">"
-    return "="
+        raise ValueError("Unexpected comparison structure")
 
 
 def generate_canonical_surreal_integers(limit: int):
+    values = [ZERO]
+
+    current = ZERO
+    positives = []
+    for _ in range(limit):
+        current = surreal_successor(current)
+        positives.append(current)
+
+    current = ZERO
+    negatives = []
+    for _ in range(limit):
+        current = surreal_predecessor(current)
+        negatives.append(current)
+
+    return list(reversed(negatives)) + values + positives
+
+def surreal_to_signed_int_tape(s: str) -> str:
     """
-    CFG for canonical finite integer surreal numbers:
+    TM-style surreal -> integer tape.
 
-    S → P | Z | N
-    Z → {|}
-    P → {Z|} | {P|}
-    N → {|Z} | {|N}
-
-    This generates all canonical finite integer surreal numbers
-    from -limit to +limit.
-    """
-
-    values = {"{|}": 0}
-
-    zero = "{|}"
-
-    positive = zero
-    for i in range(1, limit + 1):
-        positive = "{" + positive + "|}"
-        values[positive] = i
-
-    negative = zero
-    for i in range(1, limit + 1):
-        negative = "{|" + negative + "}"
-        values[negative] = -i
-
-    return values
-
-
-def build_convert_machine(input_string: str) -> TuringMachine:
-    """
-    Turing Machine that converts non-negative surreal integers to unary.
-
-    {|}          -> =0
-    {{|}|}       -> =1
-    {{{|}|}|}    -> =11
-
-    It ignores the first | because it belongs to the base number {|}.
-    Every remaining | becomes one unary 1.
+    Output format:
+    {|}          -> 0
+    {{|}|}       -> +
+    {{{|}|}|}    -> ++
+    {|{|}}       -> -
+    {|{|{|}}}    -> --
     """
 
-    tape = list(input_string) + [BLANK]
-    rules = {}
+    if not is_valid_surreal_integer(s):
+        raise ValueError("Invalid surreal integer")
 
-    def add(state, symbols, new_state, write=None, move="R"):
-        if isinstance(symbols, str):
-            symbols = [symbols]
+    tape = ""
 
-        for sym in symbols:
-            rules[(state, sym)] = (
-                new_state,
-                write if write is not None else sym,
-                move,
-            )
+    while not is_zero(s):
+        if is_successor_form(s):
+            tape += "+"
+            s = inner_successor(s)
 
-    add("start", "{", "goEnd", move="R")
+        elif is_predecessor_form(s):
+            tape += "-"
+            s = inner_predecessor(s)
 
-    for sym in ["|", "}", "=", "1", "0", BLANK]:
-        add("start", sym, "reject")
+        else:
+            raise ValueError("Invalid surreal structure")
 
-    for sym in ["{", "|", "}"]:
-        add("goEnd", sym, "goEnd", move="R")
-    add("goEnd", BLANK, "returnLeft", write="=", move="L")
+    if tape == "":
+        return "0"
 
-    for sym in ["{", "|", "}", "=", "1", "0", "B"]:
-        add("returnLeft", sym, "returnLeft", move="L")
-    add("returnLeft", BLANK, "markFirstBar", move="R")
+    return tape
 
-    add("markFirstBar", "{", "findFirstBar", move="R")
 
-    for sym in ["|", "}", "=", "B", "1", "0", BLANK]:
-        add("markFirstBar", sym, "reject")
+def signed_int_tape_to_surreal(tape: str) -> str:
+    """
+    TM-style integer tape -> surreal.
 
-    for sym in ["{", "}"]:
-        add("findFirstBar", sym, "findFirstBar", move="R")
-    add("findFirstBar", "|", "returnLeftCount", write="B", move="L")
+    Input format:
+    0   -> {|}
+    +   -> {{|}|}
+    ++  -> {{{|}|}|}
+    -   -> {|{|}}
+    --  -> {|{|{|}}}
+    """
 
-    for sym in ["=", "B", "1", "0", BLANK]:
-        add("findFirstBar", sym, "reject")
+    if tape == "0":
+        return ZERO
 
-    for sym in ["{", "|", "}", "=", "B", "1", "0"]:
-        add("returnLeftCount", sym, "returnLeftCount", move="L")
-    add("returnLeftCount", BLANK, "countBars", move="R")
+    if not tape:
+        raise ValueError("Empty integer tape")
 
-    for sym in ["{", "}", "B"]:
-        add("countBars", sym, "countBars", move="R")
+    result = ZERO
 
-    add("countBars", "|", "appendOne", write="B", move="R")
-    add("countBars", "=", "finish", move="R")
+    for symbol in tape:
+        if symbol == "+":
+            result = surreal_successor(result)
+        elif symbol == "-":
+            result = surreal_predecessor(result)
+        else:
+            raise ValueError("Integer tape must contain only 0, +, or -")
 
-    for sym in ["1", "0", BLANK]:
-        add("countBars", sym, "reject")
-
-    for sym in ["{", "|", "}", "=", "B", "1", "0"]:
-        add("appendOne", sym, "appendOne", move="R")
-    add("appendOne", BLANK, "returnLeftCount", write="1", move="L")
-
-    add("finish", "1", "accept", move="R")
-    add("finish", BLANK, "accept", write="0", move="R")
-
-    return TuringMachine(
-        tape=tape,
-        head=0,
-        state="start",
-        rules=rules,
-    )
-
+    return result
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Turing Machine framework for finite integer surreal numbers"
+        description="Symbolic Turing-machine-style operations on finite surreal integers"
     )
 
-    parser.add_argument("--validate", help="Validate one finite integer surreal number")
-    parser.add_argument("--convert", help="Convert one finite integer surreal number to unary")
-    parser.add_argument("--compare", nargs=2, help="Compare two finite integer surreal numbers")
-    parser.add_argument("--generate-cfg", type=int, help="Generate surreal integers using CFG up to depth n")
-    parser.add_argument("--trace", action="store_true", help="Show Turing Machine trace")
+    parser.add_argument("--validate", help="Validate a finite canonical surreal integer")
+    parser.add_argument("--successor", help="Apply surreal +1 operation")
+    parser.add_argument("--predecessor", help="Apply surreal -1 operation")
+    parser.add_argument("--compare", nargs=2, help="Compare two surreal integers structurally")
+    parser.add_argument("--generate-cfg", type=int, help="Generate surreal integers up to depth n")
+    parser.add_argument("--trace", action="store_true", help="Show comparison trace")
+    parser.add_argument("--to-int", help="Convert surreal integer to signed integer tape")
+    parser.add_argument("--to-surreal", help="Convert signed integer tape to surreal integer")
 
     args = parser.parse_args()
 
     if args.validate:
-        valid = is_valid_surreal_integer(args.validate)
-
         print("Input:", args.validate)
-        print("Result:", "ACCEPT" if valid else "REJECT")
+        print("Result:", "ACCEPT" if is_valid_surreal_integer(args.validate) else "REJECT")
 
-        if valid:
-            print("Integer value:", surreal_to_int(args.validate))
-
-    elif args.convert:
-        if not is_valid_surreal_integer(args.convert):
+    elif args.successor:
+        if not is_valid_surreal_integer(args.successor):
             print("Invalid surreal integer")
             return
 
-        value = surreal_to_int(args.convert)
-        unary = surreal_to_unary(args.convert)
+        result = surreal_successor(args.successor)
+        print("Input:", args.successor)
+        print("Successor:", result)
 
-        print("Input:", args.convert)
-        print("Integer value:", value)
-        print("Unary:", unary)
+    elif args.predecessor:
+        if not is_valid_surreal_integer(args.predecessor):
+            print("Invalid surreal integer")
+            return
 
-        if value >= 0:
-            machine = build_convert_machine(args.convert)
-            state, tape = machine.run(trace=args.trace)
-
-            print("Turing Machine final state:", state)
-            print("Turing Machine tape:", tape)
-        else:
-            print("Negative integer converted using recursive signed unary logic.")
+        result = surreal_predecessor(args.predecessor)
+        print("Input:", args.predecessor)
+        print("Predecessor:", result)
 
     elif args.compare:
         a, b = args.compare
 
-        if not is_valid_surreal_integer(a):
-            print("First number is invalid")
-            return
-
-        if not is_valid_surreal_integer(b):
-            print("Second number is invalid")
-            return
-
-        result = compare_surreal(a, b)
-
+        result = compare_surreal(a, b, trace=args.trace)
         print(f"{a} {result} {b}")
-        print(f"{surreal_to_int(a)} {result} {surreal_to_int(b)}")
 
     elif args.generate_cfg is not None:
         values = generate_canonical_surreal_integers(args.generate_cfg)
 
-        print(
-            f"CFG-generated canonical surreal integers "
-            f"from -{args.generate_cfg} to {args.generate_cfg}:"
-        )
+        print("CFG-generated canonical finite surreal integers:")
+        for value in values:
+            print(value)
+    elif args.to_int:
+        try:
+            result = surreal_to_signed_int_tape(args.to_int)
+            print("Input surreal:", args.to_int)
+            print("Integer tape:", result)
+        except ValueError as e:
+            print("Error:", e)
 
-        for surreal, value in sorted(values.items(), key=lambda item: item[1]):
-            print(f"{value:3} = {surreal}")
+    elif args.to_surreal:
+        try:
+            result = signed_int_tape_to_surreal(args.to_surreal)
+            print("Input integer tape:", args.to_surreal)
+            print("Surreal:", result)
+        except ValueError as e:
+            print("Error:", e)
 
     else:
         parser.print_help()

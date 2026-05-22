@@ -1,23 +1,30 @@
-# Surreal Number Turing Machine Framework
+# Surreal Integer Symbolic Machine
 
-This project implements a Python framework for working with canonical finite integer surreal numbers using Turing Machine concepts and context-free grammar generation.
+A Python framework for working with canonical finite surreal integers using symbolic computation and Turing-machine-inspired operations.
 
-The framework supports:
+This project implements surreal integer validation, symbolic comparison, recursive generation, and tape-style conversions without relying on ordinary arithmetic internally.
 
-- validation of surreal integers
-- conversion of surreal integers to unary form
-- comparison of surreal integers
-- step-by-step Turing Machine tracing
-- context-free grammar (CFG) generation of surreal integers
+---
+
+# Features
+
+* Validation of canonical finite surreal integers
+* Structural comparison of surreal integers
+* Recursive surreal successor and predecessor operations
+* Generation of surreal integers using CFG-style recursion
+* Conversion between surreal integers and symbolic signed tapes
+* Optional step-by-step comparison tracing
+* Symbolic computation inspired by Turing Machine concepts
 
 ---
 
 # Canonical Finite Integer Surreal Numbers
 
-The project uses the following recursive representation:
+The framework uses the following recursive representation:
 
 ```text
 0  = {|}
+
 1  = {{|}|}
 2  = {{{|}|}|}
 3  = {{{{|}|}|}|}
@@ -27,13 +34,13 @@ The project uses the following recursive representation:
 -3 = {|{|{|{|}}}}
 ```
 
-Positive integers are recursively represented as:
+Positive integers are recursively defined as:
 
 ```text
 x + 1 = {x|}
 ```
 
-Negative integers are recursively represented as:
+Negative integers are recursively defined as:
 
 ```text
 x - 1 = {|x}
@@ -43,37 +50,36 @@ x - 1 = {|x}
 
 # Alphabet
 
-The framework works over the alphabet:
+The framework operates over the alphabet:
 
 ```text
 Σ = { '{', '}', '|' }
 ```
+
+No additional symbols are required for surreal integer representation.
 
 ---
 
 # Project Structure
 
 ```text
-surreal_tm.py
+main.py
 README.md
-images/
 ```
 
-Main file:
+Main implementation file:
 
 ```text
-surreal_tm.py
+main.py
 ```
 
 ---
 
-# Features
+# Validation of Surreal Integers
 
-## 1. Validation of Surreal Integers
+The framework validates canonical finite surreal integers recursively.
 
-The framework validates canonical finite integer surreal numbers.
-
-Examples of accepted inputs:
+Accepted examples:
 
 ```text
 {|}
@@ -83,7 +89,7 @@ Examples of accepted inputs:
 {|{|{|}}}
 ```
 
-Examples of rejected inputs:
+Rejected examples:
 
 ```text
 {{||}
@@ -91,110 +97,197 @@ Examples of rejected inputs:
 abc
 ```
 
-The validation logic follows the recursive surreal integer definitions.
+Validation strictly follows the recursive surreal integer definitions.
 
 ---
 
-## 2. Conversion to Unary
+# Successor and Predecessor Operations
 
-The framework converts surreal integers into unary form.
+The framework implements symbolic surreal arithmetic operations.
 
-Examples:
+## Successor
 
 ```text
-{|}          -> 0
-{{|}|}       -> 1
-{{{|}|}|}    -> 11
-{{{{|}|}|}|} -> 111
-
-{|{|}}       -> -1
-{|{|{|}}}    -> -11
+x + 1 = {x|}
 ```
 
-The conversion process for non-negative integers is implemented using a simulated Turing Machine.
+Example:
+
+```text
+{{|}|} -> {{{|}|}|}
+```
+
+## Predecessor
+
+```text
+x - 1 = {|x}
+```
+
+Example:
+
+```text
+{{|}|} -> {|{{|}|}}
+```
+
+These operations manipulate surreal structures directly rather than converting them into ordinary integers.
 
 ---
 
-## 3. Comparison of Surreal Integers
+# Structural Comparison of Surreal Integers
 
-The framework compares two surreal integers.
+The framework compares surreal integers structurally.
 
 Examples:
 
 ```text
 {{|}|} < {{{|}|}|}
+
 {|{|}} < {{|}|}
+
 {{{|}|}|} > {{|}|}
 ```
 
+The comparison algorithm works recursively using:
+
+* zero recognition
+* successor forms
+* predecessor forms
+* recursive reduction of inner surreal structures
+
+No conversion to Python integers is used during comparison.
+
 ---
 
-## 4. Turing Machine Trace Mode
+# Comparison Trace Mode
 
-The framework can display the execution trace of the Turing Machine.
-
-The trace includes:
-
-- current tape contents
-- current state
-- current head position
+Trace mode displays recursive comparison steps.
 
 Example:
 
-```text
-{{|}|}
-^ state=start
-
-{{|}|}
- ^ state=goEnd
-
-{{|}|}=
-     ^ state=returnLeft
+```bash
+python3 main.py --compare "{{{|}|}|}" "{{|}|}" --trace
 ```
+
+Example output:
+
+```text
+Comparing: {{{|}|}|}  ?  {{|}|}
+Comparing: {{|}|}  ?  {|}
+```
+
+This demonstrates how surreal structures are reduced recursively during symbolic comparison.
 
 ---
 
-# Context-Free Grammar (CFG)
+# CFG-Style Recursive Generation
 
-The project also implements a context-free grammar generator for canonical finite integer surreal numbers.
+The framework can recursively generate canonical surreal integers up to a chosen depth.
 
-Grammar:
+Example:
 
-```text
-S → P | Z | N
-Z → {|}
-P → {Z|} | {P|}
-N → {|Z} | {|N}
+```bash
+python3 main.py --generate-cfg 3
 ```
 
-Where:
+Example output:
 
 ```text
-Z generates zero
-P generates positive integers
-N generates negative integers
-```
+CFG-generated canonical finite surreal integers:
 
-Examples generated by the CFG:
-
-```text
+{|{|{|}}}
+{|{|}}
 {|}
 {{|}|}
 {{{|}|}|}
-{|{|}}
-{|{|{|}}}
+{{{{|}|}|}|}
 ```
 
-The CFG generator is implemented in Python and can generate surreal integers up to a specified recursion depth.
+The generator recursively constructs surreal integers using successor and predecessor forms.
 
 ---
 
-# How to Run
+# Symbolic Tape Conversion
+
+The framework also supports symbolic tape representations inspired by Turing Machine encodings.
+
+---
+
+## Surreal → Signed Tape
+
+Examples:
+
+```text
+{|}          -> 0
+{{|}|}       -> +
+{{{|}|}|}    -> ++
+{{{{|}|}|}|} -> +++
+
+{|{|}}       -> -
+{|{|{|}}}    -> --
+```
+
+Example command:
+
+```bash
+python3 main.py --to-int "{{{|}|}|}"
+```
+
+Output:
+
+```text
+Input surreal: {{{|}|}|}
+Integer tape: ++
+```
+
+---
+
+## Signed Tape → Surreal
+
+Example command:
+
+```bash
+python3 main.py --to-surreal "++"
+```
+
+Output:
+
+```text
+Input integer tape: ++
+Surreal: {{{|}|}|}
+```
+
+Examples:
+
+```text
+0   -> {|}
++   -> {{|}|}
+++  -> {{{|}|}|}
+-   -> {|{|}}
+--  -> {|{|{|}}}
+```
+
+---
+
+# Internal Representation Rules
+
+The validator accepts only canonical finite surreal integers generated by:
+
+```text
+0              -> {|}
+successor(x)   -> {x|}
+predecessor(x) -> {|x}
+```
+
+Any malformed structure is rejected.
+
+---
+
+# Command Line Usage
 
 Run commands using:
 
 ```bash
-python surreal_tm.py [option]
+python3 main.py [option]
 ```
 
 ---
@@ -202,35 +295,27 @@ python surreal_tm.py [option]
 # Validate a Surreal Integer
 
 ```bash
-python surreal_tm.py --validate "{|}"
+python3 main.py --validate "{|}"
 ```
 
 ```bash
-python surreal_tm.py --validate "{{{|}|}|}"
-```
-
-```bash
-python surreal_tm.py --validate "{|{|{|}}}"
+python3 main.py --validate "{{{|}|}|}"
 ```
 
 ---
 
-# Convert a Surreal Integer
+# Successor Operation
 
 ```bash
-python surreal_tm.py --convert "{|}"
+python3 main.py --successor "{{|}|}"
 ```
 
-```bash
-python surreal_tm.py --convert "{{|}|}"
-```
+---
+
+# Predecessor Operation
 
 ```bash
-python surreal_tm.py --convert "{{{|}|}|}"
-```
-
-```bash
-python surreal_tm.py --convert "{|{|}}"
+python3 main.py --predecessor "{{|}|}"
 ```
 
 ---
@@ -238,96 +323,67 @@ python surreal_tm.py --convert "{|{|}}"
 # Compare Two Surreal Integers
 
 ```bash
-python surreal_tm.py --compare "{|}" "{{|}|}"
+python3 main.py --compare "{{{|}|}|}" "{{|}|}"
 ```
+
+---
+
+# Generate Surreal Integers
 
 ```bash
-python surreal_tm.py --compare "{{{|}|}|}" "{{|}|}"
+python3 main.py --generate-cfg 3
 ```
+
+---
+
+# Convert Surreal Integer to Tape
 
 ```bash
-python surreal_tm.py --compare "{|{|}}" "{{|}|}"
+python3 main.py --to-int "{{{{|}|}|}|}"
 ```
 
 ---
 
-# Generate Surreal Integers Using CFG
+# Convert Tape to Surreal Integer
 
 ```bash
-python surreal_tm.py --generate-cfg 3
-```
-
-Example output:
-
-```text
-CFG-generated canonical surreal integers from -3 to 3:
-
- -3 = {|{|{|{|}}}}
- -2 = {|{|{|}}}
- -1 = {|{|}}
-  0 = {|}
-  1 = {{|}|}
-  2 = {{{|}|}|}
-  3 = {{{{|}|}|}|}
+python3 main.py --to-surreal "---"
 ```
 
 ---
 
-# Trace Mode
+# Example Session
 
 ```bash
-python surreal_tm.py --convert "{{|}|}" --trace
+python3 main.py --validate "{{|}|}"
+
+python3 main.py --successor "{{|}|}"
+
+python3 main.py --compare "{{{|}|}|}" "{|{|}}"
+
+python3 main.py --generate-cfg 2
+
+python3 main.py --to-int "{{{{|}|}|}|}"
+
+python3 main.py --to-surreal "---"
 ```
 
 ---
 
-# Turing Machine Visualizations
+# Educational Purpose
 
-The `images/` folder contains screenshots of the Turing Machine graphs used in the project.
+This project was created as an educational exploration of:
 
-These graphs describe:
+* surreal numbers
+* symbolic recursive systems
+* structural computation
+* Turing-machine-inspired symbolic processing
+* recursive grammar-based generation
 
-- surreal integer validation
-- surreal integer conversion
-- surreal integer comparison
-- state transitions and tape operations
+The implementation intentionally avoids ordinary arithmetic during surreal operations and instead manipulates recursive symbolic structures directly. 
 
-Example:
+In the updated version of the project, I changed the integer conversion representation from ordinary decimal integers to symbolic signed tapes using `+` and `-` symbols. For example, `{{{|}|}|}` is converted to `++` instead of the integer `2`.
 
-```md
-![Conversion Turing Machine](images/converter.png) 
-```
+The reason for this change was to make the implementation more consistent with Turing Machine principles and symbolic computation. Using ordinary integers internally would rely on standard arithmetic abstractions already built into programming languages, while symbolic tapes better represent how a theoretical Turing Machine processes information step by step using symbols only.
 
-```md
-![Comparison Turing Machine](images/validator.png) 
-```
-
----
-
-# Implementation Details
-
-The framework contains a general `TuringMachine` class that stores:
-
-- tape
-- current state
-- head position
-- transition rules
-- blank symbol
-
-The framework simulates Turing Machine execution step by step using explicit transition rules.
-
-The project also includes a recursive CFG-based surreal integer generator.
-
----
-
-# Goal of the Project
-
-The goal of this project is to demonstrate how canonical finite integer surreal numbers can be represented, generated, validated, converted, and compared using concepts from Theory of Computation, including Turing Machines and Context-Free Grammars.
-
-# Acknowledgment
-
-The Turing Machine simulations and state diagrams used in this project were created and tested using:
-
-https://turingmachine.io/
-
-This tool was used for simulating transition functions, visualizing state graphs, and testing the behavior of the implemented Turing Machines.
+This approach keeps the project closer to Theory of Computation concepts, since the framework now manipulates symbolic structures directly rather than depending on built-in numeric representations.
